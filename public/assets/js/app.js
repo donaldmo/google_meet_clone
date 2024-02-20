@@ -1,15 +1,34 @@
 var MyApp = (function () {
+  var socket = null;
+  var user_id = "";
+  var meeting_id = "";
+
+
   function init(uid, mid) {
-    event_process_for_signaling_server()
+    user_id = uid;
+    meeting_id = mid;
+
+    event_process_for_signaling_server();
   }
 
-  var socket = null
 
   function event_process_for_signaling_server() {
     socket = io.connect();
 
     socket.on("connect", () => {
-      console.log('socket connect to client side');
+      if (socket.connected) {
+
+        if (user_id != "" && meeting_id != "") {
+          socket.emit('userconnect', {
+            displayName: user_id,
+            meetingId: meeting_id
+          })
+        }
+      }
+    })
+
+    socket.on('inform_others_about_me', data => {
+      console.log(data)
     })
   }
 
