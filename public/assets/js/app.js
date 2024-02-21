@@ -1,19 +1,17 @@
 var MyApp = (function () {
-  var socket = null;
-  var user_id = "";
-  var meeting_id = "";
-
+  var socket = null
+  var user_id = ""
+  var meeting_id = ""
 
   function init(uid, mid) {
-    user_id = uid;
-    meeting_id = mid;
+    user_id = uid
+    meeting_id = mid
 
-    event_process_for_signaling_server();
+    event_process_for_signaling_server()
   }
 
-
   function event_process_for_signaling_server() {
-    socket = io.connect();
+    socket = io.connect()
 
     socket.on("connect", () => {
       if (socket.connected) {
@@ -27,14 +25,27 @@ var MyApp = (function () {
       }
     })
 
-    socket.on('inform_others_about_me', data => {
-      console.log(data)
-    })
+    socket.on('inform_others_about_me', data => addUser(data))
+  }
+
+  function addUser() {
+    var originalDiv = document.getElementById('otherTemplate')
+
+    var newDivId = originalDiv.cloneNode(true)
+    newDivId.setAttribute('id', connId)
+    newDivId.classList.add('other')
+
+    var h2Element = newDivId.querySelector('h2')
+    h2Element.textContent = other_user_id
+    newDivId.querySelector('video').setAttribute('id', 'v_' + connId)
+    newDivId.querySelector('audio').setAttribute('id', 'a_' + connId)
+    newDivId.style.display = 'block'
+    document.getElementById('divUsers').appendChild(newDivId)
   }
 
   return {
     _init: function (uid, mid) {
-      init(uid, mid);
+      init(uid, mid)
     }
   }
-})();
+})()

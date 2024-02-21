@@ -6,16 +6,18 @@ var port = process.env.PORT || 3000
 
 var server = app.listen(port, function () {
 	console.log(`Listening on port ${port}`)
-});
+})
 
 const io = require("socket.io")(server, { allowEIO3: true });
-app.use(express.static(path.join(__dirname, "")));
+app.use(express.static(path.join(__dirname, "")))
 
 var userConnections = []
 
 io.on('connection', (socket) => {
+	console.log('connection: ', socket.id)
 
 	socket.on("userconnect", data => {
+		console.log('userconnect: ', data)
 		var other_users = userConnections.filter(i => i != data.meetingId)
 
 		userConnections.push({
@@ -31,5 +33,6 @@ io.on('connection', (socket) => {
 			})
 		})
 
+		console.log('other_user: ', other_users)
 	})
 })
