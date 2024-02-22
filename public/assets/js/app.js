@@ -1,3 +1,25 @@
+var AppProcess = (function () {
+  var iceConfiguration = {
+    iceServers: [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:stun1.l.google.com:19302" },
+      { urls: "stun:stun2.l.google.com:19302" },
+      { urls: "stun:stun3.l.google.com:19302" },
+      { urls: "stun:stun4.l.google.com:19302" },
+    ]    
+  }
+
+  function setConnection(connId) {
+    var connection = new RTCPeerConnection(iceConfiguration)
+  }
+
+  return {
+    setNewConnection: async function (connId) {
+      await setConnection(connId)
+    }
+  }
+})
+
 var MyApp = (function () {
   var socket = null
   var user_id = ""
@@ -25,22 +47,21 @@ var MyApp = (function () {
       }
     })
 
-    socket.on('inform_others_about_me', data => addUser(data))
+    socket.on('inform_others_about_me', data => {
+      console.log('inform_others_about_me: ', data)
+      addUser(data.other_user_id, data.connId)
+      AppProcess.setNewConnection(data.connId)
+    })
   }
 
-  function addUser() {
-    var originalDiv = document.getElementById('otherTemplate')
-
-    var newDivId = originalDiv.cloneNode(true)
-    newDivId.setAttribute('id', connId)
-    newDivId.classList.add('other')
-
-    var h2Element = newDivId.querySelector('h2')
-    h2Element.textContent = other_user_id
-    newDivId.querySelector('video').setAttribute('id', 'v_' + connId)
-    newDivId.querySelector('audio').setAttribute('id', 'a_' + connId)
-    newDivId.style.display = 'block'
-    document.getElementById('divUsers').appendChild(newDivId)
+  function addUser(other_user_id, connId) {
+    var newDivId = $('#otherTemplate').clone()
+    newDivId = newDivId.attr('id', connId).addClass('other')
+    newDivId.find('h2').text(other_user_id)
+    newDivId.find('video').attr('id', "v_" + connId)
+    newDivId.find('audio').attr('id', "a_" + connId)
+    newDivId.show()
+    $('#divUsers').append(newDivId)
   }
 
   return {
