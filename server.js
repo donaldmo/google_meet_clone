@@ -13,11 +13,11 @@ app.use(express.static(path.join(__dirname, "")))
 
 var userConnections = []
 
-io.on('connection', (socket) => {
-	console.log('connection: ', socket.id)
+io.on("connection", (socket) => {
+	console.log("connection: ", socket.id)
 
 	socket.on("userconnect", data => {
-		console.log('userconnect: ', data)
+		console.log("userconnect: ", data)
 		var other_users = userConnections.filter(i => i != data.meetingId)
 
 		userConnections.push({
@@ -33,6 +33,15 @@ io.on('connection', (socket) => {
 			})
 		})
 
-		console.log('other_user: ', other_users)
+		console.log("other_user: ", other_users)
+	})
+
+	socket.on("SDPProcess", data => {
+		console.log("SDPProcess : ", data)
+		
+		socket.to(data.to_connid).emit("SDPProcess", {
+			message: data.message,
+			from_connid: socket.id
+		})
 	})
 })
