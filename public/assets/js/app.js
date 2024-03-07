@@ -1,7 +1,7 @@
 var AppProcess = (function () {
   var serverProcess
   var my_connection_id
-  
+
   var peers_connection_ids = []
   var peers_connection = []
 
@@ -49,7 +49,9 @@ var AppProcess = (function () {
 
       if (event.track.kind == 'video') {
         var videoTracks = remote_vid_stream[connId].getVideoTracks()
-        videoTracks.forEach(track => remote_vid_stream[connId].removeTrack(track))
+        videoTracks.forEach(track => (
+          remote_vid_stream[connId].removeTrack(track))
+        )
         remote_vid_stream[connId].addTrack(event.track)
 
         remoteVidPlayer = document.getElementById('v_' + connId)
@@ -59,7 +61,9 @@ var AppProcess = (function () {
       }
       else if (event.track.kind == "audio") {
         var audioTracks = remote_vid_stream[connId].getAudioTracks()
-        audioTracks.forEach(track => remote_aud_stream[connId].removeTrack(track))
+        audioTracks.forEach(track => (
+          remote_aud_stream[connId].removeTrack(track))
+        )
         remote_aud_stream[connId].addTrack(event.track)
 
         remoteAudioPlayer = document.getElementById('a_' + connId)
@@ -90,10 +94,37 @@ var AppProcess = (function () {
     message = JSON.parse(data)
 
     if (message.answer) {
-
+      await peers_connection[from_connid].setRemoteDescription(
+        new RTPSessionDescription(message.answer)
+      )
     }
-    else if(message.offer) {
-      // here...
+    
+    if (message.offer) {
+      if (!peers_connection[from_connid]) {
+        await setConnection(from_connid)
+      }
+
+      await peers_connection[from_connid].setRemoteDescription(
+        new RTCSessionDescription(message.offer)
+      )
+
+      var answer = await peers_connection[from_connid].createOffer()
+      await peers_connection[from_connid].setLocalDescription(answer)
+      serverProcess(JSON.stringify({ answer: answer }), from_connid)
+    }
+
+    if (message.icecandidate) {
+      if (!peers_connection[from_connid]) {
+        await setConnection(from_connid)
+      }
+
+      try {
+        await peers_connection[from_connid].addIceCandidate(
+          message.icecandidate
+        )
+      } catch(error) {
+        console.log(error)
+      }
     }
   }
 
@@ -128,7 +159,7 @@ var MyApp = (function () {
     socket = io.connect()
 
     var SDPConnection = function (data, to_connid) {
-      console.log('emit SDPProcess...', data, to_connid)
+      console.log('SDPProcess...', data, to_connid)
 
       socket.emit("SDPProcess", {
         message: data,
@@ -152,13 +183,13 @@ var MyApp = (function () {
     })
 
     socket.on('inform_others_about_me', data => {
-      console.log('inform_others_about_me: ', data)
+      console.log('on: inform_others_about_me: ', data)
       addUser(data.other_user_id, data.connId)
       AppProcess.setNewConnection(data.connId)
     })
 
     socket.on("SDPProcess", async function (data) {
-      console.log('SDPProcess: ', data)
+      console.log('on: SDPProcess: ', data)
       await AppProcess.processClientFunc(data.message, data.from_connid)
     })
   }
