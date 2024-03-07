@@ -26,14 +26,14 @@ io.on("connection", (socket) => {
 			meeting_id: data.meetingId
 		})
 
-		other_users.forEach(user => {
-			socket.to(user.connectionId).emit("inform_others_about_me", {
+		other_users.forEach(other_user => {
+			socket.to(other_user.connectionId).emit("inform_others_about_me", {
 				other_user_id: data.displayName,
 				connId: socket.id,
 			})
 		})
 
-		console.log("other_user: ", other_users)
+		socket.emit("inform_me_about_other_user", other_users)
 	})
 
 	socket.on("SDPProcess", data => {
