@@ -16,6 +16,7 @@ var AppProcess = (function () {
   var video_states = { None: 0, Camera: 1, ScreenShare: 2 }
   var video_st = video_states.None
   var videoCamTrack
+  var rtp_vid_senders = []
 
   var iceConfiguration = {
     iceServers: [
@@ -25,6 +26,13 @@ var AppProcess = (function () {
       { urls: "stun:stun3.l.google.com:19302" },
       { urls: "stun:stun4.l.google.com:19302" },
     ]
+  }
+
+  async function _init(SDP_function, my_connid) {
+    serverProcess = SDP_function
+    my_connection_id = my_connid
+    eventProcess()
+    local_div = document.getElementById("locaVideoPlayer");
   }
 
   function eventProcess() {
@@ -97,6 +105,7 @@ var AppProcess = (function () {
         videoCamTrack = vstream.getVideoTracks()[0]
         if (videoCamTrack) {
           local_div.srcObject = new MediaStream([videoCamTrack])
+          updateMediaSenders(videoCamTrack, rtp_vid_senders)
         }
       }
     }
@@ -110,15 +119,7 @@ var AppProcess = (function () {
 
   async function removeMediaSenders() { }
 
-  function updateMediaSenders() { }
-
-  async function _init(SDP_function, my_connid) {
-    serverProcess = SDP_function
-    my_connection_id = my_connid
-
-    eventProcess()
-    local_div = document.getElementById("localVideoPlayer")
-  }
+  function updateMediaSenders(videoCamTrack, rtp_vid_senders) { }
 
   async function setConnection(connId) {
     console.log('set new connection: ', connId)
@@ -173,6 +174,12 @@ var AppProcess = (function () {
     peers_connection_ids[connId] = connId
     peers_connection[connId] = connection
 
+    if (video_st == video_states.Camera || video_st.ScreenShare) {
+      if (videoCamTrack) {
+        updateMediaSenders(videoCamTrack, rtp_vid_senders)
+      }
+    }
+
     return connection
   }
 
@@ -225,13 +232,12 @@ var AppProcess = (function () {
     }
   }
 
-
   return {
     setNewConnection: async function (connId) {
       await setConnection(connId)
     },
-    init: async function (SDPConnection, my_connid) {
-      await _init(SDPConnection, my_connid)
+    init: async function (SDP_function, my_connid) {
+      await _init(SDP_function, my_connid)
     },
     processClientFunc: async function (data, from_connid) {
       await SDPProcess(data, from_connid)
@@ -248,15 +254,17 @@ var MyApp = (function () {
   function init(uid, mid) {
     user_id = uid
     meeting_id = mid
-
+    $("#meetingContainer").show()
+    $("#me h2").text(user_id + "(Me)")
+    document.title = user_id
     event_process_for_signaling_server()
   }
 
   function event_process_for_signaling_server() {
     socket = io.connect()
 
-    var SDPConnection = function (data, to_connid) {
-      console.log('SDPProcess...', data, to_connid)
+    var SDP_function = function (data, to_connid) {
+      console.log('SDPProcess: ', data, to_connid)
 
       socket.emit("SDPProcess", {
         message: data,
@@ -266,9 +274,9 @@ var MyApp = (function () {
 
     socket.on("connect", () => {
       if (socket.connected) {
-        console.log('my_connid: ', socket.id)
+        console.log('connect: ', socket.connected)
 
-        AppProcess.init(SDPConnection, socket.id)
+        AppProcess.init(SDP_function, socket.id)
 
         if (user_id != "" && meeting_id != "") {
           socket.emit('userconnect', {
