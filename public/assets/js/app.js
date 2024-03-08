@@ -8,6 +8,13 @@ var AppProcess = (function () {
   var remote_vid_stream = []
   var remote_aud_stream = []
 
+  var audio
+  var isAudioMute = true
+  var rtp_aud_senders = []
+
+  var video_states = { None: 0, Camera: 1, ScreenShare: 2 }
+  var video_st = video_states.None
+
   var iceConfiguration = {
     iceServers: [
       { urls: "stun:stun.l.google.com:19302" },
@@ -18,9 +25,66 @@ var AppProcess = (function () {
     ]
   }
 
+  function eventProcess() {
+    $("#miceMuteUnmute").on("click", async function () {
+      if (!audio) {
+        await loadAudio();
+      }
+
+      if (!audio) {
+        alert("Audio permission has not granted.")
+        return
+      }
+
+      if (isAudioMute) {
+        audio.enabled = true
+        $(this).html('<span class="material-icons" style="width: 100%;">mic</span>')
+        updateMediaSenders(audio, rtp_aud_senders)
+      }
+      else {
+        audio.enabled = false
+        $(this).html('<span class="material-icons" style="width: 100%;">mic_off</span>')
+        removeMediaSenders(rtp_aud_senders)
+      }
+
+      isAudioMute = !isAudioMute
+    })
+
+
+    // <span class="material-icons" style="width: 100%;">videocam_off</span>
+    $("#videoCamOnOff").on("click", async function () {
+      if (video_st == video_states.Camera) {
+        await videoProcess(video_states.None)
+      }
+      else {
+        await videoProcess(video_states.Camera)
+      }
+    })
+
+    $("#ScreenShareOnOf").on("click", async function () {
+      if (video_st == video_states.ScreenShare) {
+        await videoProcess(video_states.None)
+      }
+      else {
+        await videoProcess(video_states.ScreenShare)
+      }
+    })
+  }
+
+  async function loadAudio() { }
+
+  async function videoProcess() { }
+
+  async function removeMediaSenders() { }
+
+  function updateMediaSenders() { }
+
   async function _init(SDP_function, my_connid) {
     serverProcess = SDP_function
     my_connection_id = my_connid
+
+    eventProcess()
+    local_div = document.getElementById("localVideoPlayer")
   }
 
   async function setConnection(connId) {
