@@ -8,12 +8,14 @@ var AppProcess = (function () {
   var remote_vid_stream = []
   var remote_aud_stream = []
 
+  var local_div
   var audio
   var isAudioMute = true
   var rtp_aud_senders = []
 
   var video_states = { None: 0, Camera: 1, ScreenShare: 2 }
   var video_st = video_states.None
+  var videoCamTrack
 
   var iceConfiguration = {
     iceServers: [
@@ -73,7 +75,38 @@ var AppProcess = (function () {
 
   async function loadAudio() { }
 
-  async function videoProcess() { }
+  async function videoProcess(newVideoState) {
+    try {
+      var vstream = null
+
+      if (newVideoState == video_states.Camera) {
+        vstream = await navigator.mediaDevices.getUserMedia({
+          video: { width: 1920, height: 1080 },
+          audio: false
+        })
+      }
+
+      else if (newVideoState == video_states.ScreenShare) {
+        vstream = await navigator.mediaDevices.getDisplayMedia({
+          video: { width: 1920, height: 1080 },
+          audio: false
+        })
+      }
+
+      if (vstream && vstream.getVideoTracks().length > 0) {
+        videoCamTrack = vstream.getVideoTracks()[0]
+        if (videoCamTrack) {
+          local_div.srcObject = new MediaStream([videoCamTrack])
+        }
+      }
+    }
+    catch (error) {
+      console.log(error)
+      return
+    }
+
+    video_st = newVideoState
+  }
 
   async function removeMediaSenders() { }
 
