@@ -22,9 +22,9 @@ var AppProcess = (function () {
     iceServers: [
       { urls: "stun:stun.l.google.com:19302" },
       { urls: "stun:stun1.l.google.com:19302" },
-      { urls: "stun:stun2.l.google.com:19302" },
-      { urls: "stun:stun3.l.google.com:19302" },
-      { urls: "stun:stun4.l.google.com:19302" },
+      // { urls: "stun:stun2.l.google.com:19302" },
+      // { urls: "stun:stun3.l.google.com:19302" },
+      // { urls: "stun:stun4.l.google.com:19302" },
     ]
   }
 
@@ -60,8 +60,6 @@ var AppProcess = (function () {
       isAudioMute = !isAudioMute
     })
 
-
-    // <span class="material-icons" style="width: 100%;">videocam_off</span>
     $("#videoCamOnOff").on("click", async function () {
       if (video_st == video_states.Camera) {
         await videoProcess(video_states.None)
@@ -88,15 +86,22 @@ var AppProcess = (function () {
       var vstream = null
 
       if (newVideoState == video_states.Camera) {
-        vstream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 1920, height: 1080 },
+        var constraints = {
+          video: {
+            width: 1920,
+            height: 1080
+          },
           audio: false
-        })
+        }
+        vstream = await navigator.mediaDevices.getUserMedia(constraints)
       }
 
       else if (newVideoState == video_states.ScreenShare) {
         vstream = await navigator.mediaDevices.getDisplayMedia({
-          video: { width: 1920, height: 1080 },
+          video: {
+            width: 1920,
+            height: 1080
+          },
           audio: false
         })
       }
@@ -119,7 +124,29 @@ var AppProcess = (function () {
 
   async function removeMediaSenders() { }
 
-  function updateMediaSenders(videoCamTrack, rtp_vid_senders) { }
+  async function updateMediaSenders(track, rtp_senders) {
+    for (var con_id in peers_connection_ids) {
+      if (connection_status(peers_connection[con_id])) {
+        if (rtp_senders[con_id] && rtp_senders[con_id].track) {
+          rtp_senders[con_id].replaceTrack(track);
+        } else {
+          rtp_senders[con_id] = peers_connection[con_id].addTrack(track);
+        }
+      }
+    }
+  }
+
+  function connection_status(connection) {
+    if (connection &&
+      (connection.connectionState == "new" ||
+        connection.connectionState == "connecting" ||
+        connection.connectionState == "connected")
+    ) {
+      return true
+    } else {
+      return false
+    }
+  }
 
   async function setConnection(connId) {
     console.log('set new connection: ', connId)
@@ -137,6 +164,7 @@ var AppProcess = (function () {
     }
 
     connection.ontrack = function (event) {
+      console.log('ontrack: ', event)
       if (!remote_vid_stream[connId]) {
         remote_vid_stream[connId] = new MediaStream()
       }
@@ -146,13 +174,14 @@ var AppProcess = (function () {
       }
 
       if (event.track.kind == 'video') {
-        var videoTracks = remote_vid_stream[connId].getVideoTracks()
-        videoTracks.forEach(track => (
-          remote_vid_stream[connId].removeTrack(track))
-        )
+        remote_vid_stream[connId]
+          .getVideoTracks()
+          .forEach((t) => remote_vid_stream[connId].removeTrack(t))
+
         remote_vid_stream[connId].addTrack(event.track)
 
         remoteVidPlayer = document.getElementById('v_' + connId)
+        console.log("Remote Vid Player: ", remoteVidPlayer)
         remoteVidPlayer.srcObject = null
         remoteVidPlayer.srcObject = remote_vid_stream[connId]
         remoteVidPlayer.load()
@@ -203,7 +232,7 @@ var AppProcess = (function () {
       )
     }
 
-    if (message.offer) {
+    else if (message.offer) {
       if (!peers_connection[from_connid]) {
         await setConnection(from_connid)
       }

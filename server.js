@@ -1,11 +1,27 @@
 const express = require("express");
 const path = require("path");
+const os = require('os');
+
 
 var app = express();
 var port = process.env.PORT || 3000
 
+function getLocalIpAddress() {
+	const nics = os.networkInterfaces();
+	for (const name in nics) {
+		const nicsDetails = nics[name];
+		for (const nic of nicsDetails) {
+			if (nic.family === 'IPv4' && !nic.internal) {
+				return nic.address;
+			}
+		}
+	}
+	return null;
+}
+
 var server = app.listen(port, function () {
-	console.log(`Listening on port ${port}`)
+	const localIpAddress = getLocalIpAddress();
+	console.log(`Listening on port http://${localIpAddress}:${port}`)
 })
 
 const io = require("socket.io")(server, { allowEIO3: true });
@@ -38,7 +54,7 @@ io.on("connection", (socket) => {
 
 	socket.on("SDPProcess", data => {
 		console.log("SDPProcess : ", data)
-		
+
 		socket.to(data.to_connid).emit("SDPProcess", {
 			message: data.message,
 			from_connid: socket.id
