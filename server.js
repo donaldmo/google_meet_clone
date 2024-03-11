@@ -53,8 +53,7 @@ io.on("connection", (socket) => {
 	})
 
 	socket.on("SDPProcess", data => {
-		console.log("SDPProcess : ", data)
-
+		// console.log("SDPProcess : ", data)
 		socket.to(data.to_connid).emit("SDPProcess", {
 			message: data.message,
 			from_connid: socket.id
