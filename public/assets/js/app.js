@@ -1,23 +1,23 @@
 var AppProcess = (function () {
-	var serverProcess;
+	var serverProcess
 	var my_connection_id
 
-	var peers_connection_ids = [];
-	var peers_connection = [];
+	var peers_connection_ids = []
+	var peers_connection = []
 
-	var remote_vid_stream = [];
-	var remote_aud_stream = [];
+	var remote_vid_stream = []
+	var remote_aud_stream = []
 
-	var local_div;
-	var audio;
-	var isAudioMute = true;
-	var rtp_aud_senders = [];
+	var local_div
+	var audio
+	var isAudioMute = true
+	var rtp_aud_senders = []
 
 	var video_states = {
 		None: 0,
 		Camera: 1,
 		ScreenShare: 2,
-	};
+	}
 
 	var video_st = video_states.None
 	var videoCamTrack
@@ -48,18 +48,18 @@ var AppProcess = (function () {
 			}
 
 			if (!audio) {
-				alert("Audio permission has not granted");
+				alert("Audio permission has not granted")
 				return
 			}
 
 			if (isAudioMute) {
 				audio.enabled = true
-				$(this).html("<span class='material-icons' style='width:100%;'>mic</span>")
+				$(this).html("<span class='material-icons' style='width:100%'>mic</span>")
 				updateMediaSenders(audio, rtp_aud_senders)
 			}
 			else {
 				audio.enabled = false
-				$(this).html("<span class='material-icons' style='width:100%;'>mic_off</span>")
+				$(this).html("<span class='material-icons' style='width:100%'>mic_off</span>")
 				removeMediaSenders(rtp_aud_senders)
 			}
 
@@ -68,10 +68,10 @@ var AppProcess = (function () {
 
 		$("#videoCamOnOff").on("click", async function () {
 			if (video_st == video_states.Camera) {
-				await videoProcess(video_states.None);
+				await videoProcess(video_states.None)
 			}
 			else {
-				await videoProcess(video_states.Camera);
+				await videoProcess(video_states.Camera)
 			}
 		})
 
@@ -85,9 +85,49 @@ var AppProcess = (function () {
 		})
 	}
 
-	async function loadAudio() { }
+	async function loadAudio() { 
+		try {
+			var astream = await navigator.mediaDevices.getUserMedia({
+				video: false,
+				audio: true
+			})
+
+			audio = astream.getAudioTracks()[0]
+			audio.enabled = false
+		} 
+		catch (error) {
+			console.log(error)
+		}
+	}
 
 	async function videoProcess(newVideoState) {
+		if (newVideoState == video_states.None) {
+			$("#videoCamOnOff").html(
+				"<span class='material-icons' style='width:100%;'>videocam_off</span>"
+			)
+
+			// $("#ScreenShareOnOf").html(
+			// 	'<span class="material-icons">present_to_all</span><div>Present Now</div>'
+			// )
+
+			video_st = newVideoState
+			removeVideoStream(rtp_vid_senders)
+
+			// serverProcess(
+			// 	JSON.stringify({
+			// 		Video_switch_off: "Video_switch_off",
+			// 	}),
+			// 	rtp_vid_senders
+			// )
+			return
+		}
+
+		if (newVideoState == video_states.Camera) {
+			$("#videoCamOnOff").html(
+				"<span class='material-icons' style='width:100%;'>videocam_on</span>"
+			)
+		}
+
 		try {
 			var vstream = null
 
@@ -128,15 +168,32 @@ var AppProcess = (function () {
 		video_st = newVideoState
 	}
 
-	function removeMediaSenders(rtp_senders) { }
+	function removeVideoStream(rtp_vid_senders) {
+		if (videoCamTrack) {
+			videoCamTrack.stop()
+			videoCamTrack = null
+			local_div.srcObject = null
+			removeMediaSenders(rtp_vid_senders)
+		}
+	}
+
+	function removeMediaSenders(rtp_senders) {
+		for (var con_id in peers_connection_ids) {
+			if (rtp_senders[con_id] && connection_status(peers_connection[con_id])) {
+				peers_connection[con_id].removeTrack(rtp_senders[con_id])
+				rtp_senders[con_id] = null
+			}
+		}
+	}
 
 	async function updateMediaSenders(track, rtp_senders) {
 		for (var con_id in peers_connection_ids) {
 			if (connection_status(peers_connection[con_id])) {
 				if (rtp_senders[con_id] && rtp_senders[con_id].track) {
-					rtp_senders[con_id].replaceTrack(track);
-				} else {
-					rtp_senders[con_id] = peers_connection[con_id].addTrack(track);
+					rtp_senders[con_id].replaceTrack(track)
+				}
+				else {
+					rtp_senders[con_id] = peers_connection[con_id].addTrack(track)
 				}
 			}
 		}
@@ -149,7 +206,8 @@ var AppProcess = (function () {
 			connection.connectionState == "connected")
 		) {
 			return true
-		} else {
+		}
+		else {
 			return false
 		}
 	}
@@ -170,11 +228,11 @@ var AppProcess = (function () {
 
 		connection.ontrack = function (event) {
 			if (!remote_vid_stream[connId]) {
-				remote_vid_stream[connId] = new MediaStream();
+				remote_vid_stream[connId] = new MediaStream()
 			}
 
 			if (!remote_aud_stream[connId]) {
-				remote_aud_stream[connId] = new MediaStream();
+				remote_aud_stream[connId] = new MediaStream()
 			}
 
 			if (event.track.kind == "video") {
@@ -244,35 +302,35 @@ var AppProcess = (function () {
 				new RTCSessionDescription(message.offer)
 			)
 
-			var answer = await peers_connection[from_connid].createAnswer();
-			await peers_connection[from_connid].setLocalDescription(answer);
-			serverProcess(JSON.stringify({ answer: answer, }), from_connid);
+			var answer = await peers_connection[from_connid].createAnswer()
+			await peers_connection[from_connid].setLocalDescription(answer)
+			serverProcess(JSON.stringify({ answer: answer, }), from_connid)
 		}
 
 		else if (message.icecandidate) {
 			if (!peers_connection[from_connid]) {
-				await setConnection(from_connid);
+				await setConnection(from_connid)
 			}
 
 			try {
 				await peers_connection[from_connid].addIceCandidate(
 					message.icecandidate
-				);
+				)
 			} catch (e) {
-				console.log(e);
+				console.log(e)
 			}
 		}
 	}
 
 	return {
 		setNewConnection: async function (connid) {
-			await setConnection(connid);
+			await setConnection(connid)
 		},
 		init: async function (SDP_function, my_connid) {
-			await _init(SDP_function, my_connid);
+			await _init(SDP_function, my_connid)
 		},
 		processClientFunc: async function (data, from_connid) {
-			await SDPProcess(data, from_connid);
+			await SDPProcess(data, from_connid)
 		}
 	}
 })()
@@ -292,7 +350,7 @@ var MyApp = (function () {
 	}
 
 	function event_process_for_signaling_server() {
-		socket = io.connect();
+		socket = io.connect()
 
 		var SDP_function = function (data, to_connid) {
 			socket.emit("SDPProcess", {
@@ -315,8 +373,8 @@ var MyApp = (function () {
 		})
 
 		socket.on("inform_others_about_me", function (data) {
-			addUser(data.other_user_id, data.connId, data.userNumber);
-			AppProcess.setNewConnection(data.connId);
+			addUser(data.other_user_id, data.connId, data.userNumber)
+			AppProcess.setNewConnection(data.connId)
 		})
 
 		socket.on("inform_me_about_other_user", function (users) {
