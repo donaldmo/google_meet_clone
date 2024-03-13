@@ -34,12 +34,12 @@ io.on("connection", (socket) => {
 
 	socket.on("userconnect", data => {
 		console.log("userconnect: ", data)
-		var other_users = userConnections.filter(i => i != data.meetingId)
+		var other_users = userConnections.filter(i => i != data.meetingid)
 
 		userConnections.push({
 			connectionId: socket.id,
 			user_id: data.displayName,
-			meeting_id: data.meetingId
+			meeting_id: data.meetingid
 		})
 
 		other_users.forEach(other_user => {
@@ -59,4 +59,14 @@ io.on("connection", (socket) => {
 			from_connid: socket.id
 		})
 	})
+
+  socket.on("disconnect", function() {
+    console.log("Disconnected")
+    var disUser = userConnections.find(p => p.connectionId == socket.id)
+
+    if (disUser) {
+      var meetingid = disUser.meetingid
+      userConnections.filter
+    }
+  })
 })
