@@ -348,6 +348,28 @@ var AppProcess = (function () {
     }
   }
 
+  async function closeConnection(connid) {
+    peers_connection_ids[connid] = null
+    if (peers_connection[connid]) {
+      peers_connection[connid].close()
+      peers_connection[connid] = null
+    }
+    
+    if (remote_aud_stream[connid]) {
+      remote_aud_stream[connid].getTracks().forEach((t) => {
+        if (t.stop) t.stop()
+      })
+      remote_aud_stream[connid] = null
+    }
+
+    if (remote_vid_stream[connid]) {
+      remote_vid_stream[connid].getTracks().forEach((t) => {
+        if (t.stop) t.stop()
+      })
+      remote_vid_stream[connid] = null
+    }
+  }
+
   return {
     setNewConnection: async function (connid) {
       await setConnection(connid)
@@ -357,6 +379,9 @@ var AppProcess = (function () {
     },
     processClientFunc: async function (data, from_connid) {
       await SDPProcess(data, from_connid)
+    },
+    closeConnectionCall: async function (connid) {
+      await closeConnection(connid)
     }
   }
 })()
@@ -414,6 +439,13 @@ var MyApp = (function () {
 
     socket.on("SDPProcess", async function (data) {
       await AppProcess.processClientFunc(data.message, data.from_connid)
+    })
+
+    socket.on("inform_other_about_disconnected_user", function (data) {
+      console.log("inform_other_about_disconnected_user: ", data)
+      console.log($("#" + data.connId))
+      $("#" + data.connId).remove()
+      AppProcess.closeConnectionCall(data.connId)
     })
   }
 

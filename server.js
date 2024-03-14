@@ -60,13 +60,24 @@ io.on("connection", (socket) => {
 		})
 	})
 
-  socket.on("disconnect", function() {
-    console.log("Disconnected")
-    var disUser = userConnections.find(p => p.connectionId == socket.id)
+	socket.on("disconnect", function () {
+		console.log("Disconnected: ", socket.id)
+		var user = userConnections.find((p) => p.connectionId == socket.id)
+		if (user) {
+			userConnections = userConnections.filter(
+				(p) => p.connectionId != socket.id
+			)
 
-    if (disUser) {
-      var meetingid = disUser.meetingid
-      userConnections.filter
-    }
-  })
+			var list = userConnections.filter((p) => {
+        return p.meeting_id == user.meeting_id
+      })
+
+			list.forEach(v => {
+				socket.to(v.connectionId).emit("inform_other_about_disconnected_user", {
+					connId: socket.id,
+					uNumber: userConnections.length,
+				})
+			})
+		}
+	})
 })
